@@ -3,7 +3,8 @@
 ##################################################################
 # Description: Uses wget's spider with aria2c's parallel downloading
 # Usage: ./theripper.sh "opendirlink" "opendirsubstring"
-# Example: ./theripper.sh "http://link.com/blabla/doraemon/" "http://link.com/blabla"
+# Example: ./theripper.sh "link.com/blabla/doraemon/" "link.com/blabla"
+# Note: Make sure that the path doesn't contain %20's or others. You can use this site http://www.asiteaboutnothing.net/c_decode-url.html
 ####################################################################
 
 set -e
@@ -26,6 +27,12 @@ spider() {
 	wget -o $logfile -e robots=off -r --no-parent --spider "$URL" || true
 	#Grabs all lines with the pattern --2017-07-12 15:40:31-- then from the results removes everthing that ends in / (meaning it's a directory
 	#then removes pattern from every line
+	grep -B 2 -E '... 404 Not Found|... 403 Forbidden|... 301 Moved Permanently' $logfile | \
+	grep -i '^--[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]--' | \
+	grep '[^'/']$'  | sed -e 's/^--[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]--  //g' > $logfile.tmp
+	while read line; do
+		sed -i "\|$line|d" $logfile
+	done < $logfile.tmp
 	cat $logfile | grep -i '^--[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]--' | \
 	grep '[^'/']$'  | sed -e 's/^--[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]--  //g' > $LIST
 	#Delete the folder made by wget (deletes all empty directories in the directory this script is run
@@ -64,6 +71,6 @@ download
 
 # Cleanup
 rm opendir-$$.log
+rm opendir-$$.log.tmp
 rm list-$$.txt
 rm link-$$.down
-
